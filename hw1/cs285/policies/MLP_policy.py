@@ -124,12 +124,18 @@ class MLPPolicySL(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         :return:
             action: sampled action(s) from the policy
         """
-        # TODO: implement the forward pass of the network.
+        # Done: implement the forward pass of the network.
         # You can return anything you want, but you should be able to differentiate
         # through it. For example, you can return a torch.FloatTensor. You can also
         # return more flexible objects, such as a
         # `torch.distributions.Distribution` object. It's up to you!
-        raise NotImplementedError
+
+        act_mean = self.mean_net(observation)
+        act_std = torch.exp(self.logstd)
+        action_distribution = distributions.normal.Normal(act_mean, act_std)
+
+        act = action_distribution.rsample()         # rsample for gradient tracking
+        return act
 
     def update(self, observations, actions):
         """
@@ -140,8 +146,16 @@ class MLPPolicySL(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         :return:
             dict: 'Training Loss': supervised learning loss
         """
-        # TODO: update the policy and return the loss
-        loss = TODO
+        # Done: update the policy and return the loss
+        policy_acts = self.forward(observations)
+        criterion = nn.MSELoss()
+
+        self.optimizer.zero_grad()
+        loss = criterion(policy_acts, actions)
+        loss.backward()
+        self.optimizer.step()
+        
+
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),
